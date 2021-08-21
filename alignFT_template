@@ -1,0 +1,43 @@
+#!/bin/bash
+
+## run the create runnable python cript once to create the runfiles
+declare -i n_dofs=7  # number of run_num must be <= number of total dofs (for now 7): wc -l dofs.txt
+declare -i n_runfiles=10  # number of files within run_num dir
+declare -i n_constraints=3  # number of constraints used for each dof
+
+export n_dofs
+export n_runfiles
+export n_constraints
+
+python create_runables.py
+
+dof_names="runlists/dofnames.txt"
+
+#total_num = 10  # total number of configs i want to run
+cat $dof_names | while read line; do
+  echo "start for dof: $line"
+  cd ~/output_alignment/bash_output_alignment/MU
+  mkdir dof_$line
+  cd dof_$line
+
+  for ii in {0..9}; do  # endpoint is n_runfiles-1
+    dof_data="~/python_plotting/bash_template/runlists/dofs_$line"_"$ii.txt"
+    constr_data="~/python_plotting/bash_template/runlists/constr_$line"_"$ii.txt"
+
+    echo "dofs used: $dof_data"
+    echo "constr used: $constr_data"
+    mkdir run_num_$ii
+    cd run_num_$ii
+
+    export dof_data
+    export constr_data
+
+    echo "start alignment run"
+    ~/private/Alignment/AlignmentDev_v17r0/build.x86_64-centos7-gcc9-opt/run ~/private/Alignment/AlignmentDev_v17r0/Alignment/Escher/scripts/gaudisplititer.py -n 10 -e 5000 ~/private/Alignment/AlignmentDev_v17r0/Alignment/Escher/options/AlignFT.py
+    echo "done with alignment run"
+    echo "%%%%%%%%%%%%%%%%%%%%%%%"
+    cd ..
+  done
+  echo "end for dof: $line"
+  cd ..
+done
